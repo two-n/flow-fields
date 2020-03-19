@@ -1,0 +1,44 @@
+html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      canvas {
+        position: absolute;
+      }
+
+      div#container {
+        height: 100vh;
+        position: relative;
+        overflow: hidden;
+      }
+
+      div#controlsContainer {
+        position: absolute;
+        display: flex;
+        z-index: 1;
+        overflow: hidden;
+      }
+
+      div.controlPanel {
+        display: flex;
+        flex-direction: column;
+      }
+
+      div.controlItem {
+        position: relative;
+        display: flex;
+        flex-direction: row;
+        padding: 10px 15px;
+      }
+
+      div.replay, div.cog, div.save {
+        opacity: 0.2;
+      }
+      div.replay:hover, div.cog:hover, div.save:hover {
+        opacity: 1
+      }
+
+      input {
+        margin: auto 10px;
+      }
