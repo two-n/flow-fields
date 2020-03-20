@@ -1,22 +1,26 @@
 /* CONSTANTS AND GLOBALS */
-const canvas = document.getElementById("canvas"),
-  context = canvas.getContext("2d"),
+const lineCanvas = d3.select("#lineCanvas"),
+  flowCanvas = d3.select("#fieldCanvas"),
+  context = lineCanvas.node().getContext("2d"),
+  flowCxt = flowCanvas.node().getContext("2d"),
   controlsIconWidth = 30,
   controlsWidth = controlsIconWidth * 3,
   controlPanelWidth = 200,
-  width = (canvas.width = window.innerWidth),
-  height = (canvas.height = window.innerHeight),
+  width = (lineCanvas.node().width = flowCanvas.node().width = window.innerWidth),
+  height = (lineCanvas.node().height = flowCanvas.node().height = window.innerHeight),
   opacityAlpha = 0.0075,
-  center = [width / 2, height / 2],
-  friction = 0.99,
-  scale = 0.003,
   ease = d3.easeCubic;
 
-let controlContainer;
-let animationTimer = false;
-let res = 10
-let points = [];
-
+let controlContainer,
+  canvasControl,
+  play, 
+  pause,
+  points = [],
+  animationTimer = false,
+  friction = 0.99,
+  scale = 0.003,
+  res = 10;
+ 
 /* INITIAL STATE */
 let state = {
   controlsOpen: false,
@@ -42,13 +46,7 @@ const controls = {
 init()
 
 /* SET STATE FUNCTION */
-function setStateAndDraw(nextState) {
-  state = Object.assign({}, state, nextState);
-  console.log("state update", state);
-  draw();
-}
-
-function setStateOnly(nextState, callback = null) {
+function setState(nextState, callback = null) {
   state = Object.assign({}, state, nextState);
   console.log("state update", state);
   if(callback) { callback() };
@@ -57,7 +55,7 @@ function setStateOnly(nextState, callback = null) {
 function init() {
   console.log("state:", state)
 
-  d3.select("#canvas")
+  lineCanvas
     .on("click", () => pauseOrPlay())
 
   controlContainer = d3.select("div#controlsContainer")
@@ -70,7 +68,7 @@ function init() {
     .attr("class", "replay")
     .style("right", `-${controlPanelWidth}px`)
     .on("click", () => {
-      draw()
+      drawAll()
     })
     .append("img")
     .attr("src", "./assets/replay.svg")
@@ -82,9 +80,13 @@ function init() {
     .append("div")
     .attr("class", "save")
     .style("right", `-${controlPanelWidth}px`)
-    .on("click", () => {
-      saveCanvasImage()
-    }).append("img")
+    .append("a")
+    .attr('download', 'flowfields.png')
+    .on("click", function() {
+      /* we need to update href to the current canvas at the moment of click so that it saves the current canvas and not the initial blank canvas */
+      this.href = lineCanvas.node().toDataURL("image/png").replace("image/png", "image/octet-stream")
+    })
+    .append("img")
     .attr("src", "./assets/save.svg")
     .style("width", `${controlsIconWidth}px`)
     .style("height", `${controlsIconWidth}px`)
@@ -95,7 +97,7 @@ function init() {
     .attr("class", "cog")
     .style("right", `-${controlPanelWidth}px`)
     .on("click", () => {
-      setStateOnly({ controlsOpen: !state.controlsOpen }, toggleControlPanel)
+      setState({ controlsOpen: !state.controlsOpen }, toggleControlPanel)
     }).append("img")
     .attr("src", "./assets/cog.svg")
     .style("width", `${controlsIconWidth}px`)
@@ -121,12 +123,12 @@ function init() {
     .on("click", ([name, details]) => {
       details.type === 'text' 
         ? null
-        : setStateAndDraw({ [name]: !state[name] })
+        : setState({ [name]: !state[name] }, toggleFields)
     })
     // specific to the text input
     .attr("size", 5)
     .on("keypress", function([name, _]) {
-      if (d3.event.keyCode === 13) setStateAndDraw({ [name]: +this.value})
+      if (d3.event.keyCode === 13) setState({ [name]: +this.value}, drawAll())
     })
 
   controlItems
@@ -135,7 +137,19 @@ function init() {
     .classed("checked", ([name, _]) => name === state[name])
     .text(([_, details]) => details.display)
 
-  draw();
+  // canvas play / pause
+  canvasControl = d3.select("#container").selectAll("img.canvasControl")
+    .data(["play", "pause"])
+    .join("img")
+    .attr("src", d => `./assets/${d}.svg`)
+    .attr("class", d => `canvasControl ${d}`)
+    .attr("width", width / 4)
+    .attr("height", height / 4)
+    .on("click", function() {
+      pauseOrPlay()
+    })
+
+  drawAll()
 }
 
 function refreshPoints() {
@@ -154,20 +168,22 @@ function refreshPoints() {
 }
 
 function resetTimer() {
+  if (animationTimer) { animationTimer.stop() }
   animationTimer = false
 }
 
 function pauseOrPlay() {
   if (!state.paused) {
     animationTimer.stop()
-    setStateOnly({ paused: true })
+    setState({ paused: true })
   } else { 
     animationTimer.restart(animation) 
-    setStateOnly({ paused: false })
+    setState({ paused: false })
   }
+  canvasControl.classed("possession", d => d === "pause" ? state.paused : !state.paused)
 }
 
-function clean() {
+function cleanLines() {
   context.clearRect(0, 0, width, height);
 }
 
@@ -178,13 +194,10 @@ function toggleControlPanel() {
     .style("right", state.controlsOpen ? "0px" : `-${controlPanelWidth}px`)
 }
 
-function draw() {
+function drawLines() {
 
   resetTimer();
-  clean();
-
-  // draw flow fields
-  if (state.showFlow) drawFlowField()
+  cleanLines();
 
   // get new points
   refreshPoints();
@@ -194,11 +207,21 @@ function draw() {
   
 }
 
+function drawAll() {
+  setState({ paused : false})
+  resetTimer()
+  cleanFields()
+  cleanLines()
+  drawLines();
+  if (state.showFlow) drawFlowField()
+}
+
 function animation(elapsed) {
+
   // compute how far through the animation we are (0 to 1)
   const t = Math.min(1, ease(elapsed / 30000));
   
-  drawLines()
+  drawLineInterval()
 
   // if this animation is over
   if (t === 1) {
@@ -207,24 +230,32 @@ function animation(elapsed) {
   }
 }
 
+function toggleFields() {
+  state.showFlow ? drawFlowField() : cleanFields()
+}
+
+function cleanFields() {
+  flowCxt.clearRect(0, 0, width, height);
+}
+
 function drawFlowField() {
-  context.lineWidth = 0.1;
+  flowCxt.lineWidth = 0.1;
   for (var x = 0; x < width; x += res) {
     for (var y = 0; y < height; y += res) {
       var value = getValue(x, y);
-      context.save();
-      context.translate(x, y);
-      context.rotate(value);
-      context.beginPath();
-      context.moveTo(0, 0);
-      context.lineTo(res, 0);
-      context.stroke();
-      context.restore();
+      flowCxt.save();
+      flowCxt.translate(x, y);
+      flowCxt.rotate(value);
+      flowCxt.beginPath();
+      flowCxt.moveTo(0, 0);
+      flowCxt.lineTo(res, 0);
+      flowCxt.stroke();
+      flowCxt.restore();
     }
   }
 }
 
-function drawLines() {
+function drawLineInterval() {
   context.lineWidth = 0.15;
   context.strokeStyle = 'black'
   for (let i = 0; i < points.length; i++) {
@@ -261,9 +292,4 @@ function drawLines() {
 
 function getValue(x, y) {
   return noise.perlin2(x * scale, y * scale) * Math.PI * 2;
-}
-
-function saveCanvasImage() {
-  var image = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");  
-  window.location.href=image; 
 }
