@@ -5,6 +5,7 @@ html,
       }
       canvas {
         position: absolute;
+        opacity: 1; /* for mobile */
       }
 
       div#container {
