@@ -12,6 +12,9 @@ const lineCanvas = d3.select("#lineCanvas"),
   ease = d3.easeCubic;
 
 let controlContainer,
+  canvasControl,
+  play, 
+  pause,
   points = [],
   animationTimer = false,
   friction = 0.99,
@@ -43,7 +46,7 @@ const controls = {
 init()
 
 /* SET STATE FUNCTION */
-function setStateWithCallback(nextState, callback = null) {
+function setState(nextState, callback = null) {
   state = Object.assign({}, state, nextState);
   console.log("state update", state);
   if(callback) { callback() };
@@ -65,7 +68,7 @@ function init() {
     .attr("class", "replay")
     .style("right", `-${controlPanelWidth}px`)
     .on("click", () => {
-      drawLines()
+      drawAll()
     })
     .append("img")
     .attr("src", "./assets/replay.svg")
@@ -94,7 +97,7 @@ function init() {
     .attr("class", "cog")
     .style("right", `-${controlPanelWidth}px`)
     .on("click", () => {
-      setStateWithCallback({ controlsOpen: !state.controlsOpen }, toggleControlPanel)
+      setState({ controlsOpen: !state.controlsOpen }, toggleControlPanel)
     }).append("img")
     .attr("src", "./assets/cog.svg")
     .style("width", `${controlsIconWidth}px`)
@@ -120,7 +123,7 @@ function init() {
     .on("click", ([name, details]) => {
       details.type === 'text' 
         ? null
-        : setStateWithCallback({ [name]: !state[name] }, toggleFields)
+        : setState({ [name]: !state[name] }, toggleFields)
     })
     // specific to the text input
     .attr("size", 5)
@@ -133,6 +136,18 @@ function init() {
     .attr("class", ([_, details]) => details.type)
     .classed("checked", ([name, _]) => name === state[name])
     .text(([_, details]) => details.display)
+
+  // canvas play / pause
+  canvasControl = d3.select("#container").selectAll("img.canvasControl")
+    .data(["play", "pause"])
+    .join("img")
+    .attr("src", d => `./assets/${d}.svg`)
+    .attr("class", d => `canvasControl ${d}`)
+    .attr("width", width / 4)
+    .attr("height", height / 4)
+    .on("click", function() {
+      pauseOrPlay()
+    })
 
   drawAll()
 }
@@ -153,17 +168,19 @@ function refreshPoints() {
 }
 
 function resetTimer() {
+  if (animationTimer) { animationTimer.stop() }
   animationTimer = false
 }
 
 function pauseOrPlay() {
   if (!state.paused) {
     animationTimer.stop()
-    setStateWithCallback({ paused: true })
+    setState({ paused: true })
   } else { 
     animationTimer.restart(animation) 
-    setStateWithCallback({ paused: false })
+    setState({ paused: false })
   }
+  canvasControl.classed("possession", d => d === "pause" ? state.paused : !state.paused)
 }
 
 function cleanLines() {
@@ -191,11 +208,16 @@ function drawLines() {
 }
 
 function drawAll() {
+  setState({ paused : false})
+  resetTimer()
+  cleanFields()
+  cleanLines()
   drawLines();
   if (state.showFlow) drawFlowField()
 }
 
 function animation(elapsed) {
+
   // compute how far through the animation we are (0 to 1)
   const t = Math.min(1, ease(elapsed / 30000));
   

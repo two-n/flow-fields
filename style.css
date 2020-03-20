@@ -40,6 +40,34 @@ html,
         opacity: 1
       }
 
+      div.canvasControl.possession:hover {
+        animation: flash; 
+        animation-duration: 2000ms
+      }
+
+      .canvasControl {
+        opacity: 0;
+        transform: translate(150%, calc(50vh - 50%));
+        position: absolute;
+      }
+
+      .possession {
+        z-index: -1;
+        animation: flash linear 1000ms
+      }
+
       input {
         margin: auto 10px;
+      }
+
+      @keyframes flash {
+        0% {
+          opacity: 0.1;
+        } 
+        20% {
+          opacity: 0.8;
+        }
+        100% {
+          opacity: 0;
+        }
       }
