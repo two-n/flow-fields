@@ -82,9 +82,10 @@ function init() {
     .append("div")
     .attr("class", "save")
     .style("right", `-${controlPanelWidth}px`)
-    .on("click", () => {
-      saveCanvasImage()
-    }).append("img")
+    .append("a")
+    .attr('download', 'flowfields.png')
+    .attr('href', canvas.toDataURL("image/png").replace("image/png", "image/octet-stream"))
+    .append("img")
     .attr("src", "./assets/save.svg")
     .style("width", `${controlsIconWidth}px`)
     .style("height", `${controlsIconWidth}px`)
@@ -261,9 +262,4 @@ function drawLines() {
 
 function getValue(x, y) {
   return noise.perlin2(x * scale, y * scale) * Math.PI * 2;
-}
-
-function saveCanvasImage() {
-  var image = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");  
-  window.location.href=image; 
 }
