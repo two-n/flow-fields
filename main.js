@@ -128,7 +128,7 @@ function init() {
     // specific to the text input
     .attr("size", 5)
     .on("keypress", function([name, _]) {
-      if (d3.event.keyCode === 13) setStateAndDraw({ [name]: +this.value})
+      if (d3.event.keyCode === 13) setState({ [name]: +this.value}, drawAll())
     })
 
   controlItems
