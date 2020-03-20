@@ -51,13 +51,12 @@ function setStateAndDraw(nextState) {
 function setStateOnly(nextState, callback = null) {
   state = Object.assign({}, state, nextState);
   console.log("state update", state);
-  callback;
+  if(callback) { callback() };
 }
 
 function init() {
   console.log("state:", state)
 
-  // d3.select("#container")
   d3.select("#canvas")
     .on("click", () => pauseOrPlay())
 
@@ -65,7 +64,8 @@ function init() {
     .style("width", `${controlsWidth + controlPanelWidth}px`)
     .style("right", `-${controlPanelWidth}px`)
 
-  const replay = controlContainer
+  // replay 
+  controlContainer
     .append("div")
     .attr("class", "replay")
     .style("right", `-${controlPanelWidth}px`)
@@ -77,7 +77,8 @@ function init() {
     .style("width", `${controlsIconWidth}px`)
     .style("height", `${controlsIconWidth}px`)
     
-  const save = controlContainer
+  // save 
+  controlContainer
     .append("div")
     .attr("class", "save")
     .style("right", `-${controlPanelWidth}px`)
@@ -88,12 +89,13 @@ function init() {
     .style("width", `${controlsIconWidth}px`)
     .style("height", `${controlsIconWidth}px`)
 
-  const cog = controlContainer
+  // cog 
+  controlContainer
     .append("div")
     .attr("class", "cog")
     .style("right", `-${controlPanelWidth}px`)
     .on("click", () => {
-      setStateOnly({ controlsOpen: !state.controlsOpen }, toggleControlPanel())
+      setStateOnly({ controlsOpen: !state.controlsOpen }, toggleControlPanel)
     }).append("img")
     .attr("src", "./assets/cog.svg")
     .style("width", `${controlsIconWidth}px`)
@@ -124,9 +126,7 @@ function init() {
     // specific to the text input
     .attr("size", 5)
     .on("keypress", function([name, _]) {
-      d3.event.keyCode === 13 
-        ? setStateAndDraw({ [name]: +this.value})
-        : null
+      if (d3.event.keyCode === 13) setStateAndDraw({ [name]: +this.value})
     })
 
   controlItems
@@ -159,11 +159,9 @@ function resetTimer() {
 
 function pauseOrPlay() {
   if (!state.paused) {
-    console.log("stopping timer")
     animationTimer.stop()
     setStateOnly({ paused: true })
   } else { 
-    console.log("restarting timer")
     animationTimer.restart(animation) 
     setStateOnly({ paused: false })
   }
@@ -177,7 +175,7 @@ function toggleControlPanel() {
   controlContainer
     .transition()
     .duration(500)
-    .style("right", state.controlsOpen ? `-${controlPanelWidth}px` : "0px")
+    .style("right", state.controlsOpen ? "0px" : `-${controlPanelWidth}px`)
 }
 
 function draw() {
