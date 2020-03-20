@@ -79,7 +79,10 @@ function init() {
     .style("right", `-${controlPanelWidth}px`)
     .append("a")
     .attr('download', 'flowfields.png')
-    .attr('href', lineCanvas.node().toDataURL("image/png").replace("image/png", "image/octet-stream"))
+    .on("click", function() {
+      /* we need to update href to the current canvas at the moment of click so that it saves the current canvas and not the initial blank canvas */
+      this.href = lineCanvas.node().toDataURL("image/png").replace("image/png", "image/octet-stream")
+    })
     .append("img")
     .attr("src", "./assets/save.svg")
     .style("width", `${controlsIconWidth}px`)
